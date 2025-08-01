@@ -32,8 +32,6 @@ def save_schedule_file(links):
             f.write(f"🔗 {url}\n\n")
 
 if __name__ == "__main__":
-    print("🔄 Получаем ссылки...")
     bus_links = fetch_pdf_links()
-    print(f"✅ Найдено {len(bus_links)} ссылок")
     save_schedule_file(bus_links)
-    print(f"📁 Сохранено в файл: {TXT_FILE}")
+    print(f"✅ Сохранено {len(bus_links)} маршрутов в {TXT_FILE}")
