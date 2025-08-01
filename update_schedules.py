@@ -13,30 +13,60 @@ def fetch_links():
     response = requests.get(PAGE_URL, headers=HEADERS)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, "html.parser")
-    
-    result = []
+
+    categorized = {
+        "Stadtbus": [],
+        "RufTaxi": [],
+        "Express": [],
+        "Schulbus": [],
+        "Sonstiges": []
+    }
 
     for a in soup.find_all("a", href=True):
         href = a["href"]
         text = a.get_text(strip=True)
 
-        if href.endswith(".pdf") and text.lower().startswith("bus"):
-            full_url = href if href.startswith("http") else BASE_URL + href
-            result.append((text, full_url))
+        if not href.endswith(".pdf"):
+            continue
 
-    return result
+        full_url = href if href.startswith("http") else BASE_URL + href
 
-def save_schedule_file(entries):
+        # Категоризация по ключевым словам
+        if "ruftaxi" in text.lower():
+            categorized["RufTaxi"].append((text, full_url))
+        elif "express" in text.lower():
+            categorized["Express"].append((text, full_url))
+        elif "schulbus" in text.lower() or "schule" in text.lower():
+            categorized["Schulbus"].append((text, full_url))
+        elif "bus" in text.lower():
+            categorized["Stadtbus"].append((text, full_url))
+        else:
+            categorized["Sonstiges"].append((text, full_url))
+
+    return categorized
+
+def save_schedule_file(data):
     with open(TXT_FILE, "w", encoding="utf-8") as f:
         f.write("🚌 Актуальные расписания Stadtbus Freising (с 15.12.2024)\n")
         f.write("Источник: официальный сайт Stadtwerke Freising\n")
         f.write(PAGE_URL + "\n\n")
-        f.write("### 🚍 Stadtbus\n\n")
-        for name, link in entries:
-            f.write(f"📄 {name}\n")
-            f.write(f"🔗 {link}\n\n")
+
+        for section, entries in data.items():
+            icon = {
+                "Stadtbus": "🚍",
+                "RufTaxi": "🚖",
+                "Express": "🚅",
+                "Schulbus": "🚸",
+                "Sonstiges": "📦"
+            }.get(section, "📁")
+
+            f.write(f"### {icon} {section}\n\n")
+            for name, url in entries:
+                f.write(f"📄 {name}\n")
+                f.write(f"🔗 {url}\n\n")
 
 if __name__ == "__main__":
-    data = fetch_links()
-    save_schedule_file(data)
-    print(f"✅ Сохранено {len(data)} маршрутов в {TXT_FILE}")
+    links_by_category = fetch_links()
+    save_schedule_file(links_by_category)
+    total = sum(len(v) for v in links_by_category.values())
+    print(f"✅ Сохранено {total} ссылок в {TXT_FILE}")
