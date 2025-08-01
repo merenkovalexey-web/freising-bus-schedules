@@ -1,0 +1,31 @@
+name: Update Freising Bus Schedules
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run update script
+        run: python update_schedules.py
+
+      - name: Commit updated file
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add freising-bus-schedules.txt
+          git commit -m "🔄 Auto-update bus schedules"
+          git push
