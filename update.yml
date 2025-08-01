@@ -2,14 +2,16 @@ name: Update Freising Bus Schedules
 
 on:
   schedule:
-    - cron: '0 4 * * 1'  # Каждый понедельник в 04:00
+    - cron: '0 4 * * 1' # Каждый понедельник в 04:00
   workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -17,7 +19,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install beautifulsoup4 requests
+        run: pip install -r requirements.txt
 
       - name: Run update script
         run: python update_schedules.py
@@ -26,6 +28,5 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add freising-bus-schedules.txt
-          git commit -m "🔄 Auto-update bus schedules"
-          git push
+          git add freising-bus-schedules.txt || true
+          git diff --cached --quiet || (git commit -m "🔄 Auto-update bus schedules" && git push)
