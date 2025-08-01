@@ -18,26 +18,34 @@ ICONS = {
     "Verstärkerbus": "🔁"
 }
 
-def fetch_links_by_category():
+def fetch_schedule_entries():
     response = requests.get(PAGE_URL, headers=HEADERS)
     response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
 
-    categories = {}
-    current_category = None
+    result = {}
+    fahrplan_table = soup.find("table", class_="fahrplaene")
 
-    for element in soup.select("h3, li a"):
-        if element.name == "h3":
-            current_category = element.get_text(strip=True)
-            if current_category not in categories:
-                categories[current_category] = []
-        elif element.name == "a" and element.get("href", "").endswith(".pdf") and current_category:
-            title = element.get_text(strip=True)
-            href = element["href"]
-            full_url = href if href.startswith("http") else BASE_URL + href
-            categories[current_category].append((title, full_url))
+    if not fahrplan_table:
+        raise ValueError("❌ Таблица с расписаниями не найдена")
 
-    return categories
+    for row in fahrplan_table.find_all("tr"):
+        cells = row.find_all("td")
+        if len(cells) < 3:
+            continue
+
+        category = cells[0].get_text(strip=True)
+        link_elem = cells[2].find("a", href=True)
+        if not link_elem:
+            continue
+
+        title = link_elem.get_text(strip=True)
+        href = link_elem["href"]
+        full_url = href if href.startswith("http") else BASE_URL + href
+
+        result.setdefault(category, []).append((title, full_url))
+
+    return result
 
 def write_schedule_file(data):
     with open(TXT_FILE, "w", encoding="utf-8") as f:
@@ -53,6 +61,6 @@ def write_schedule_file(data):
                 f.write(f"🔗 {url}\n\n")
 
 if __name__ == "__main__":
-    links = fetch_links_by_category()
-    write_schedule_file(links)
+    schedule_data = fetch_schedule_entries()
+    write_schedule_file(schedule_data)
     print("✅ Готово: файл freising-bus-schedules.txt создан.")
