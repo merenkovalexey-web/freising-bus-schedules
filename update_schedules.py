@@ -9,7 +9,6 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# Значки по категориям
 ICONS = {
     "Stadtbus": "🚍",
     "Innenstadtbusse": "🚌",
@@ -19,25 +18,29 @@ ICONS = {
     "Verstärkerbus": "🔁"
 }
 
-def fetch_links_by_category():
+def fetch_schedule_entries():
     response = requests.get(PAGE_URL, headers=HEADERS)
     response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
 
-    categories = {}
-    current_category = "Sonstiges"
+    result = {}
+    current_category = None
 
-    for element in soup.select("h3, li a"):
-        if element.name == "h3":
-            current_category = element.get_text(strip=True)
-            categories[current_category] = []
-        elif element.name == "a" and element.get("href", "").endswith(".pdf"):
-            text = element.get_text(strip=True)
-            href = element["href"]
-            full_url = href if href.startswith("http") else BASE_URL + href
-            categories.setdefault(current_category, []).append((text, full_url))
+    for element in soup.find_all(["h2", "h3", "ul"]):
+        if element.name in ["h2", "h3"]:
+            category = element.get_text(strip=True)
+            if category in ICONS:
+                current_category = category
+        elif element.name == "ul" and current_category:
+            for li in element.find_all("li"):
+                a_tag = li.find("a", href=True)
+                if a_tag:
+                    title = a_tag.get_text(strip=True)
+                    href = a_tag["href"]
+                    full_url = href if href.startswith("http") else BASE_URL + href
+                    result.setdefault(current_category, []).append((title, full_url))
 
-    return categories
+    return result
 
 def write_schedule_file(data):
     with open(TXT_FILE, "w", encoding="utf-8") as f:
@@ -45,14 +48,14 @@ def write_schedule_file(data):
         f.write("Источник: официальный сайт Stadtwerke Freising\n")
         f.write(PAGE_URL + "\n\n")
 
-        for category, items in data.items():
+        for category, entries in data.items():
             icon = ICONS.get(category, "📁")
             f.write(f"### {icon} {category}\n\n")
-            for title, url in items:
+            for title, url in entries:
                 f.write(f"📄 {title}\n")
                 f.write(f"🔗 {url}\n\n")
 
 if __name__ == "__main__":
-    all_data = fetch_links_by_category()
-    write_schedule_file(all_data)
+    schedule_data = fetch_schedule_entries()
+    write_schedule_file(schedule_data)
     print("✅ Готово: файл freising-bus-schedules.txt создан.")
