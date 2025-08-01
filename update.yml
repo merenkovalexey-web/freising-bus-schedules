@@ -1,8 +1,7 @@
 name: Update Freising Bus Schedules
-
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 4 * * 1'  # Каждый понедельник в 04:00
   workflow_dispatch:
 
 jobs:
