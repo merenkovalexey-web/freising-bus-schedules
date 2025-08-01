@@ -26,17 +26,17 @@ def fetch_schedule_entries():
     result = {}
     current_category = None
 
-    for element in soup.find_all(["h2", "h3", "ul"]):
-        if element.name in ["h2", "h3"]:
-            category = element.get_text(strip=True)
-            if category in ICONS:
-                current_category = category
-        elif element.name == "ul" and current_category:
-            for li in element.find_all("li"):
-                a_tag = li.find("a", href=True)
-                if a_tag:
-                    title = a_tag.get_text(strip=True)
-                    href = a_tag["href"]
+    for container in soup.find_all("div", class_="ce-bodytext"):
+        heading = container.find(["h2", "h3"])
+        if heading:
+            heading_text = heading.get_text(strip=True)
+            if heading_text in ICONS:
+                current_category = heading_text
+        if current_category:
+            for a in container.find_all("a", href=True):
+                if a["href"].endswith(".pdf"):
+                    title = a.get_text(strip=True)
+                    href = a["href"]
                     full_url = href if href.startswith("http") else BASE_URL + href
                     result.setdefault(current_category, []).append((title, full_url))
 
@@ -56,6 +56,6 @@ def write_schedule_file(data):
                 f.write(f"🔗 {url}\n\n")
 
 if __name__ == "__main__":
-    schedule_data = fetch_schedule_entries()
-    write_schedule_file(schedule_data)
-    print("✅ Готово: файл freising-bus-schedules.txt создан.")
+    data = fetch_schedule_entries()
+    write_schedule_file(data)
+    print("✅ Готово: файл freising-bus-schedules.txt обновлён.")
