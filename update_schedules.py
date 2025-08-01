@@ -20,26 +20,24 @@ ICONS = {
 
 def fetch_schedule_entries():
     response = requests.get(PAGE_URL, headers=HEADERS)
-    response.raise_for_status()
     soup = BeautifulSoup(response.content, "html.parser")
 
     result = {}
     current_category = None
 
-    for container in soup.find_all("div", class_="ce-bodytext"):
-        heading = container.find(["h2", "h3"])
-        if heading:
-            heading_text = heading.get_text(strip=True)
+    for element in soup.find_all(["h3", "ul"]):
+        if element.name == "h3":
+            heading_text = element.get_text(strip=True)
             if heading_text in ICONS:
                 current_category = heading_text
-        if current_category:
-            for a in container.find_all("a", href=True):
-                if a["href"].endswith(".pdf"):
-                    title = a.get_text(strip=True)
-                    href = a["href"]
+        elif element.name == "ul" and current_category:
+            for li in element.find_all("li"):
+                a_tag = li.find("a", href=True)
+                if a_tag and a_tag["href"].endswith(".pdf"):
+                    title = a_tag.get_text(strip=True)
+                    href = a_tag["href"]
                     full_url = href if href.startswith("http") else BASE_URL + href
                     result.setdefault(current_category, []).append((title, full_url))
-
     return result
 
 def write_schedule_file(data):
